@@ -23,13 +23,20 @@
 
 package com.manicken;
 
+import javax.print.PrintService;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
 import javax.swing.JMenuItem;
 import javax.swing.JTextPane;
+import java.awt.print.*;
+import javax.print.attribute.standard.*;
+import java.text.MessageFormat;
 
 import processing.app.Editor;
 import processing.app.tools.Tool;
 
 import processing.app.tools.MyDiscourseFormat;
+import static processing.app.I18n.tr; // translate (multi language support)
 
 import com.manicken.CustomMenu;
 
@@ -63,21 +70,41 @@ public class manickenPrint implements Tool
 	public String getMenuTitle() {// required by tool loader
 		return thisToolMenuTitle;
 	}
-
+	PrintRequestAttributeSet printAset;
+	PrintService printService;
 	private void Print(boolean printLineNumbers, boolean printInColor)
 	{
+		JTextPane jtp = new JTextPane();
+		if (printInColor)
+			jtp.setContentType("text/html");
+		else
+			jtp.setContentType("text/text");
+
+		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+
+		jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
 		try{
-			JTextPane jtp = new JTextPane();
-			if (printInColor)
-				jtp.setContentType("text/html");
-			else
-				jtp.setContentType("text/text");
-
-			String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
-
-			jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
-			jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
-			jtp.print();
+			final MessageFormat header = new MessageFormat(editor.getSketch().getName());
+			final MessageFormat footer = new MessageFormat("");
+			boolean showPrintDialog = true;
+			
+			if (printAset == null)
+			{
+				
+				printAset = new HashPrintRequestAttributeSet();
+				printAset.add(MediaSizeName.ISO_A4);
+				//printAset.add(new PrinterResolution(300, 300, PrinterResolution.DPI));
+				//printAset.add(new MediaPrintableArea(2, 2, 210 - 4, 297 - 4, MediaPrintableArea.MM));
+			}
+			if (printService == null)
+			{
+				System.out.println("printService == null");
+				PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
+				if (printServices.length != 0) printService = printServices[0];
+			}
+			boolean interactive = true;
+			jtp.print(header, footer, showPrintDialog, printService, printAset, interactive);
 		}
 		catch (Exception ex) {ex.printStackTrace();}
 	}
@@ -109,4 +136,51 @@ public class manickenPrint implements Tool
 	{
 
 	}
+/*
+	private void handlePrint(boolean printLineNumbers, boolean printInColor) {
+		JTextPane jtp = new JTextPane();
+		try{
+			
+			if (printInColor)
+				jtp.setContentType("text/html");
+			else
+				jtp.setContentType("text/text");
+
+			String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+
+			jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+			jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
+			//jtp.print();
+		}
+		catch (Exception ex) {ex.printStackTrace(); return;}
+
+		editor.statusNotice(tr("Printing..."));
+		//printerJob = null;
+		PrinterJob printerJob = PrinterJob.getPrinterJob();
+		//if (pageFormat != null) {
+		  //System.out.println("setting page format " + pageFormat);
+		//  printerJob.setPrintable(jtp, pageFormat);
+		//} else {
+		  //printerJob.setPrintable(jtp);
+		//}
+		// set the name of the job to the code name
+		printerJob.setJobName(editor.getCurrentTab().getSketchFile().getPrettyName());
+	
+		if (printerJob.printDialog()) {
+		  try {
+			//printerJob.print();
+			//MessageFormat
+			//jtp.print(headerFormat, footerFormat, showPrintDialog, service, attributes, interactive)
+			editor.statusNotice(tr("Done printing."));
+	
+		  } catch (PrinterException pe) {
+			editor.statusError(tr("Error while printing."));
+			pe.printStackTrace();
+		  }
+		} else {
+			editor.statusNotice(tr("Printing canceled."));
+		}
+		//printerJob = null;  // clear this out?
+	  }
+	  */
 }
