@@ -37,7 +37,14 @@ two script is provided:<br>
 ## Features
 
 available at MainMenu-bar:<br>
-Extensions-"Manicken Print"
+Extensions-"Manicken Print"<br>
+<br>
+there is two alternatives:<br>
+the first is the standard one with many settings<br>
+the second one chould be used on MAC when want to save print to PDF<br>
+<br>
+each alternative shows a preview dialog<br>
+with the show lines and show in color choices<br>
 
 ## Requirements
 

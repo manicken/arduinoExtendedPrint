@@ -28,6 +28,10 @@ import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.swing.JMenuItem;
 import javax.swing.JTextPane;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane; // used by print preview dialog
+import javax.swing.JPanel;
+import javax.swing.JButton;
 import java.awt.print.*;
 import javax.print.attribute.standard.*;
 import java.text.MessageFormat;
@@ -70,44 +74,7 @@ public class manickenPrint implements Tool
 	public String getMenuTitle() {// required by tool loader
 		return thisToolMenuTitle;
 	}
-	PrintRequestAttributeSet printAset;
-	PrintService printService;
-	private void Print(boolean printLineNumbers, boolean printInColor)
-	{
-		JTextPane jtp = new JTextPane();
-		if (printInColor)
-			jtp.setContentType("text/html");
-		else
-			jtp.setContentType("text/text");
-
-		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
-
-		jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
-		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
-		try{
-			final MessageFormat header = new MessageFormat(editor.getSketch().getName());
-			final MessageFormat footer = new MessageFormat("");
-			boolean showPrintDialog = true;
-			
-			if (printAset == null)
-			{
-				
-				printAset = new HashPrintRequestAttributeSet();
-				printAset.add(MediaSizeName.ISO_A4);
-				//printAset.add(new PrinterResolution(300, 300, PrinterResolution.DPI));
-				//printAset.add(new MediaPrintableArea(2, 2, 210 - 4, 297 - 4, MediaPrintableArea.MM));
-			}
-			if (printService == null)
-			{
-				System.out.println("printService == null");
-				PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
-				if (printServices.length != 0) printService = printServices[0];
-			}
-			boolean interactive = true;
-			jtp.print(header, footer, showPrintDialog, printService, printAset, interactive);
-		}
-		catch (Exception ex) {ex.printStackTrace();}
-	}
+	
 
 	/**
 	 * This is the code that runs after the Arduino IDE GUI has been loaded
@@ -116,17 +83,22 @@ public class manickenPrint implements Tool
 		try{
 			CustomMenu cm = new CustomMenu(this.editor, thisToolMenuTitle, 
 				new JMenuItem[] {
+					/*
 					CustomMenu.Item("Print Color", event -> Print(false, true)),
 					CustomMenu.Item("Print Color with linenumbers", event -> Print(true, true)),
 					CustomMenu.Seperator(),
 					CustomMenu.Item("Print Black & White", event -> Print(false, false)),
 					CustomMenu.Item("Print Black & White with linenumbers", event -> Print(true, false)),
 					CustomMenu.Seperator(),
-					CustomMenu.Item("alt Print Color", event -> handlePrint(false, true)),
-					CustomMenu.Item("alt Print Color with linenumbers", event -> handlePrint(true, true)),
+					CustomMenu.Item("alt Print Color", event -> PrintAlt(false, true)),
+					CustomMenu.Item("alt Print Color with linenumbers", event -> PrintAlt(true, true)),
 					CustomMenu.Seperator(),
-					CustomMenu.Item("alt Print Black & White", event -> handlePrint(false, false)),
-					CustomMenu.Item("alt Print Black & White with linenumbers", event -> handlePrint(true, false)),
+					CustomMenu.Item("alt Print Black & White", event -> PrintAlt(false, false)),
+					CustomMenu.Item("alt Print Black & White with linenumbers", event -> PrintAlt(true, false)),
+						*/
+					CustomMenu.Item("Print", event -> Print(true, true)),
+					CustomMenu.Seperator(),
+					CustomMenu.Item("alt Print (shows Arduino default print dialog)", event -> PrintAlt(true, true)),
 					CustomMenu.Seperator(),
 					CustomMenu.Item("Settings (not implemented yet)", event -> ShowSettings()),
 				});
@@ -140,44 +112,206 @@ public class manickenPrint implements Tool
 	
 	private void ShowSettings()
 	{
-
+		
 	}
-	private PageFormat pageFormat;
-	private void handlePrint(boolean printLineNumbers, boolean printInColor) {
+
+	PrintRequestAttributeSet printAset;
+	PrintService printService;
+	private void Print(boolean _printLineNumbers, boolean _printInColor)
+	{
 		JTextPane jtp = new JTextPane();
-		if (printInColor)
+		if (_printInColor)
 			jtp.setContentType("text/html");
 		else
 			jtp.setContentType("text/text");
 
 		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
 
-		jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+		jtp.setText(MyDiscourseFormat.GetResult(editor, _printInColor, _printLineNumbers, lineNumberSpacing));
+		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
+		try{
+			final MessageFormat header = new MessageFormat(editor.getSketch().getName());
+			final MessageFormat footer = new MessageFormat("");
+			boolean showPrintDialog = true;
+			
+			if (printAset == null)
+			{
+				
+				printAset = new HashPrintRequestAttributeSet();
+				printAset.add(MediaSizeName.ISO_A4);
+			}
+			if (printService == null)
+			{
+				//System.out.println("printService == null");
+				PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
+				if (printServices.length != 0) printService = printServices[0];
+			}
+			boolean interactive = true;
+
+			ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (Boolean doPrint) ->  {
+				if (!doPrint) {
+					editor.statusNotice(tr("Printing canceled."));
+					return;
+				}
+				try {
+					boolean done = jtp.print(header, footer, showPrintDialog, printService, printAset, interactive);
+					if (!done) {
+						editor.statusNotice(tr("Printing canceled."));
+						return;
+					}
+					editor.statusNotice(tr("Done printing."));
+				} catch (PrinterException pe) {
+					editor.statusError(tr("Error while printing."));
+					pe.printStackTrace();
+				}
+			});
+		}
+		catch (Exception ex) {
+			editor.statusError(tr("Error while printing."));
+			ex.printStackTrace();
+		}
+	}
+
+	private PageFormat pageFormat;
+	private void PrintAlt(boolean _printLineNumbers, boolean _printInColor) {
+		JTextPane jtp = new JTextPane();
+
+		if (_printInColor)
+		{
+			jtp.setEditorKit(new javax.swing.text.html.HTMLEditorKit());
+			jtp.setContentType("text/html");
+		}
+		else
+			jtp.setContentType("text/text");
+
+		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+
+		jtp.setText(MyDiscourseFormat.GetResult(editor, _printInColor, _printLineNumbers, lineNumberSpacing));
 		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
 
-		editor.statusNotice(tr("Printing..."));
-		//printerJob = null;
-		PrinterJob printerJob = PrinterJob.getPrinterJob();
-		if (pageFormat == null) pageFormat = printerJob.defaultPage();
-		pageFormat.setOrientation(0);
-		printerJob.setPrintable(jtp.getPrintable(null, null), pageFormat);
+		ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (Boolean doPrint) ->  {
+			if (!doPrint) {
+				editor.statusNotice(tr("Printing canceled."));
+				return;
+			}
+			try {
 
-		//}
-		// set the name of the job to the code name
-		printerJob.setJobName(editor.getCurrentTab().getSketchFile().getPrettyName());
-	
-		if (printerJob.printDialog()) {
-		  try {
-			printerJob.print();
-			editor.statusNotice(tr("Done printing."));
-	
-		  } catch (PrinterException pe) {
-			editor.statusError(tr("Error while printing."));
-			pe.printStackTrace();
-		  }
-		} else {
-			editor.statusNotice(tr("Printing canceled."));
-		}
-		//printerJob = null;  // clear this out?
-	  }
+				editor.statusNotice(tr("Printing..."));
+				PrinterJob printerJob = PrinterJob.getPrinterJob();
+				if (pageFormat == null) pageFormat = printerJob.defaultPage();
+				pageFormat.setOrientation(0);
+				printerJob.setPrintable(jtp.getPrintable(null, null), pageFormat);
+
+				// set the name of the job to the code name
+				printerJob.setJobName(editor.getCurrentTab().getSketchFile().getPrettyName());
+			
+				if (printerJob.printDialog()) {
+				try {
+					printerJob.print();
+					editor.statusNotice(tr("Done printing."));
+				} catch (PrinterException pe) {
+					editor.statusError(tr("Error while printing."));
+					pe.printStackTrace();
+				}
+				} else {
+					editor.statusNotice(tr("Printing canceled."));
+				}
+				
+			} catch (Exception pex) {
+				editor.statusError(tr("Error while printing."));
+				pex.printStackTrace();
+			}
+		});		
+	}
+
+	boolean printLineNumbers = false;
+	boolean printInColor = false;
+	private void ShowPrintPreview(javax.swing.JTextPane jtp, boolean _printLineNumbers, boolean _printInColor, java.util.function.Consumer<Boolean> printButtonPressed)
+	{
+		printLineNumbers = _printLineNumbers;
+		printInColor = _printInColor;
+		javax.swing.JFrame jframe = new javax.swing.JFrame();
+        jframe.setSize(500, 500);
+		jframe.setDefaultCloseOperation(javax.swing.JFrame.HIDE_ON_CLOSE);
+		jframe.addWindowListener(new java.awt.event.WindowAdapter()
+        {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e)
+            {
+				//System.out.println("PrintPreview closing");
+                printButtonPressed.accept(false);
+                e.getWindow().dispose();
+            }
+        });
+
+		javax.swing.JButton btn = new javax.swing.JButton("Print");
+        btn.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				printButtonPressed.accept(true);
+				//System.out.println("PrintPreview print pressed");
+				jframe.setVisible(false);
+			}
+		});
+		javax.swing.JButton btn2 = new javax.swing.JButton("Cancel");
+        btn2.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				printButtonPressed.accept(false);
+				//System.out.println("PrintPreview cancel pressed");
+				jframe.setVisible(false);
+			}
+		});
+		javax.swing.JPanel jpButtons = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
+		jpButtons.add(btn);
+		jpButtons.add(btn2);
+		javax.swing.JPanel jpToolBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
+
+		javax.swing.JCheckBox chkShowLineNumbers = new javax.swing.JCheckBox("Show Line Numbers");
+		chkShowLineNumbers.setSelected(printLineNumbers);
+		chkShowLineNumbers.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				printLineNumbers = chkShowLineNumbers.isSelected();
+				String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+			}
+		});
+
+		javax.swing.JCheckBox chkShowInColor = new javax.swing.JCheckBox("Show In Color");
+		chkShowInColor.setSelected(printInColor);
+		chkShowInColor.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				printInColor = chkShowInColor.isSelected();
+				String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+				
+				if (printInColor)
+				{
+					//jtp.setEditorKit(new javax.swing.text.html.HTMLEditorKit());
+					jtp.setContentType("text/html");
+				}
+				else
+					jtp.setContentType("text/text");
+
+				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+			}
+		});
+
+		jpToolBar.add(chkShowLineNumbers);
+		jpToolBar.add(chkShowInColor);
+		jframe.add(jpToolBar, java.awt.BorderLayout.NORTH);
+		jframe.add(jpButtons, java.awt.BorderLayout.SOUTH);
+
+		javax.swing.JScrollPane scrollableTextArea = new javax.swing.JScrollPane(jtp);  
+        scrollableTextArea.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);  
+		scrollableTextArea.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_ALWAYS); 
+		
+		jframe.add(scrollableTextArea);
+        jframe.setVisible(true);
+	}
 }

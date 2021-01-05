@@ -113,7 +113,7 @@ public class MyDiscourseFormat {
 
    // StringSelection formatted = new StringSelection(cf.toString());
 
-    editor.statusNotice("Code formatted in " + (html ? "Color" : "Black & White") + " has been sent to the printer.");
+    //editor.statusNotice("Code formatted in " + (html ? "Color" : "Black & White") + " has been sent to the printer.");
 
     return cf.toString();
   }
