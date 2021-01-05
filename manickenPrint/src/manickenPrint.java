@@ -159,7 +159,7 @@ public class manickenPrint implements Tool
 		//printerJob = null;
 		PrinterJob printerJob = PrinterJob.getPrinterJob();
 		if (pageFormat == null) pageFormat = printerJob.defaultPage();
-
+		pageFormat.setOrientation(0);
 		printerJob.setPrintable(jtp.getPrintable(null, null), pageFormat);
 
 		//}
