@@ -122,6 +122,12 @@ public class manickenPrint implements Tool
 					CustomMenu.Item("Print Black & White", event -> Print(false, false)),
 					CustomMenu.Item("Print Black & White with linenumbers", event -> Print(true, false)),
 					CustomMenu.Seperator(),
+					CustomMenu.Item("alt Print Color", event -> handlePrint(false, true)),
+					CustomMenu.Item("alt Print Color with linenumbers", event -> handlePrint(true, true)),
+					CustomMenu.Seperator(),
+					CustomMenu.Item("alt Print Black & White", event -> handlePrint(false, false)),
+					CustomMenu.Item("alt Print Black & White with linenumbers", event -> handlePrint(true, false)),
+					CustomMenu.Seperator(),
 					CustomMenu.Item("Settings (not implemented yet)", event -> ShowSettings()),
 				});
 			cm.Init(true);
@@ -136,41 +142,33 @@ public class manickenPrint implements Tool
 	{
 
 	}
-/*
+	private PageFormat pageFormat;
 	private void handlePrint(boolean printLineNumbers, boolean printInColor) {
 		JTextPane jtp = new JTextPane();
-		try{
-			
-			if (printInColor)
-				jtp.setContentType("text/html");
-			else
-				jtp.setContentType("text/text");
+		if (printInColor)
+			jtp.setContentType("text/html");
+		else
+			jtp.setContentType("text/text");
 
-			String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
 
-			jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
-			jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
-			//jtp.print();
-		}
-		catch (Exception ex) {ex.printStackTrace(); return;}
+		jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
 
 		editor.statusNotice(tr("Printing..."));
 		//printerJob = null;
 		PrinterJob printerJob = PrinterJob.getPrinterJob();
-		//if (pageFormat != null) {
-		  //System.out.println("setting page format " + pageFormat);
-		//  printerJob.setPrintable(jtp, pageFormat);
-		//} else {
-		  //printerJob.setPrintable(jtp);
+		if (pageFormat == null) pageFormat = printerJob.defaultPage();
+
+		printerJob.setPrintable(jtp.getPrintable(null, null), pageFormat);
+
 		//}
 		// set the name of the job to the code name
 		printerJob.setJobName(editor.getCurrentTab().getSketchFile().getPrettyName());
 	
 		if (printerJob.printDialog()) {
 		  try {
-			//printerJob.print();
-			//MessageFormat
-			//jtp.print(headerFormat, footerFormat, showPrintDialog, service, attributes, interactive)
+			printerJob.print();
 			editor.statusNotice(tr("Done printing."));
 	
 		  } catch (PrinterException pe) {
@@ -182,5 +180,4 @@ public class manickenPrint implements Tool
 		}
 		//printerJob = null;  // clear this out?
 	  }
-	  */
 }
