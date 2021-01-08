@@ -230,10 +230,13 @@ public class manickenPrint implements Tool
                 printButtonPressed.accept(null);
                 e.getWindow().dispose();
             }
-        });
+		});
+		javax.swing.JPanel jpBottomBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
+		javax.swing.JPanel jpTopBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
 
-		javax.swing.JButton btn = new javax.swing.JButton("Print");
-        btn.addActionListener(new java.awt.event.ActionListener() {
+
+		javax.swing.JButton btnPrint = new javax.swing.JButton("Print");
+        btnPrint.addActionListener(new java.awt.event.ActionListener() {
 
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
@@ -242,8 +245,8 @@ public class manickenPrint implements Tool
 				jframe.setVisible(false);
 			}
 		});
-		javax.swing.JButton btn2 = new javax.swing.JButton("Cancel");
-        btn2.addActionListener(new java.awt.event.ActionListener() {
+		javax.swing.JButton btnCancel = new javax.swing.JButton("Cancel");
+        btnCancel.addActionListener(new java.awt.event.ActionListener() {
 
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
@@ -252,46 +255,8 @@ public class manickenPrint implements Tool
 				jframe.setVisible(false);
 			}
 		});
-		javax.swing.JPanel jpButtons = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
-		jpButtons.add(btn);
-		jpButtons.add(btn2);
-		javax.swing.JPanel jpToolBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
 
-		javax.swing.JLabel lblLineNumberSpacing = new javax.swing.JLabel("Line Number Spacing");
-		jpToolBar.add(lblLineNumberSpacing);
-		javax.swing.JTextArea txtLineNumberSpacing = new javax.swing.JTextArea(lineNumberSpacing);
-		txtLineNumberSpacing.setColumns(8);
-		jpToolBar.add(txtLineNumberSpacing);
-		javax.swing.JButton btnLineNumberSpacing = new javax.swing.JButton("apply");
-		jpToolBar.add(btnLineNumberSpacing);
-		btnLineNumberSpacing.addActionListener(new java.awt.event.ActionListener() {
-
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-				lineNumberSpacing = txtLineNumberSpacing.getText();
-				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
-			}
-		});
-
-		javax.swing.JLabel lblPaperOrientation = new javax.swing.JLabel("Paper Orientation");
-		jpToolBar.add(lblPaperOrientation);
-		javax.swing.JComboBox cBox = new javax.swing.JComboBox(new String[] {"Landscape", "Portrait", "Reverse Landscape"});
-		cBox.setSelectedItem("Portrait");
-		cBox.addActionListener(new java.awt.event.ActionListener() {
-
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-				if (cBox.getSelectedItem().toString().equals("Portrait"))
-					pdArgs.PaperOrientation = java.awt.print.PageFormat.PORTRAIT;
-				else if (cBox.getSelectedItem().toString().equals("Landscape"))
-					pdArgs.PaperOrientation = java.awt.print.PageFormat.LANDSCAPE;
-				else if (cBox.getSelectedItem().toString().equals("Reverse Landscape"))
-					pdArgs.PaperOrientation = java.awt.print.PageFormat.REVERSE_LANDSCAPE;
-			}
-		});
-		jpToolBar.add(cBox);
-
-		javax.swing.JCheckBox chkShowLineNumbers = new javax.swing.JCheckBox("Show Line Numbers");
+		javax.swing.JCheckBox chkShowLineNumbers = new javax.swing.JCheckBox("Print Line Numbers");
 		chkShowLineNumbers.setSelected(printLineNumbers);
 		chkShowLineNumbers.addActionListener(new java.awt.event.ActionListener() {
 
@@ -302,9 +267,45 @@ public class manickenPrint implements Tool
 				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
 			}
 		});
-		jpToolBar.add(chkShowLineNumbers);
+		jpTopBar.add(chkShowLineNumbers);
 
-		javax.swing.JCheckBox chkShowInColor = new javax.swing.JCheckBox("Show In Color");
+		javax.swing.JLabel lblLineNumberSpacing = new javax.swing.JLabel("Line Number Spacing");
+		jpTopBar.add(lblLineNumberSpacing);
+		javax.swing.JTextArea txtLineNumberSpacing = new javax.swing.JTextArea(lineNumberSpacing);
+		txtLineNumberSpacing.setColumns(8);
+		jpTopBar.add(txtLineNumberSpacing);
+		javax.swing.JButton btnLineNumberSpacing = new javax.swing.JButton("apply");
+		jpTopBar.add(btnLineNumberSpacing);
+		btnLineNumberSpacing.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				lineNumberSpacing = txtLineNumberSpacing.getText();
+				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+			}
+		});
+
+		javax.swing.JLabel lblPaperOrientation = new javax.swing.JLabel("Paper Orientation");
+		
+		javax.swing.JComboBox cBoxPaperOrientation = new javax.swing.JComboBox(new String[] {"Landscape", "Portrait", "Reverse Landscape"});
+		cBoxPaperOrientation.setSelectedItem("Portrait");
+		cBoxPaperOrientation.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				if (cBoxPaperOrientation.getSelectedItem().toString().equals("Portrait"))
+					pdArgs.PaperOrientation = java.awt.print.PageFormat.PORTRAIT;
+				else if (cBoxPaperOrientation.getSelectedItem().toString().equals("Landscape"))
+					pdArgs.PaperOrientation = java.awt.print.PageFormat.LANDSCAPE;
+				else if (cBoxPaperOrientation.getSelectedItem().toString().equals("Reverse Landscape"))
+					pdArgs.PaperOrientation = java.awt.print.PageFormat.REVERSE_LANDSCAPE;
+			}
+		});
+		
+
+		
+
+		javax.swing.JCheckBox chkShowInColor = new javax.swing.JCheckBox("Print In Color");
 		chkShowInColor.setSelected(printInColor);
 		chkShowInColor.addActionListener(new java.awt.event.ActionListener() {
 
@@ -319,11 +320,13 @@ public class manickenPrint implements Tool
 				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
 			}
 		});
-        jpToolBar.add(chkShowInColor);
-		
-		
-		jframe.add(jpToolBar, java.awt.BorderLayout.NORTH);
-		jframe.add(jpButtons, java.awt.BorderLayout.SOUTH);
+        jpBottomBar.add(chkShowInColor);
+		jpBottomBar.add(lblPaperOrientation);
+		jpBottomBar.add(cBoxPaperOrientation);
+		jpBottomBar.add(btnPrint);
+		jpBottomBar.add(btnCancel);
+		jframe.add(jpTopBar, java.awt.BorderLayout.NORTH);
+		jframe.add(jpBottomBar, java.awt.BorderLayout.SOUTH);
 
 		javax.swing.JScrollPane scrollableTextArea = new javax.swing.JScrollPane(jtp);  
         scrollableTextArea.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);  
