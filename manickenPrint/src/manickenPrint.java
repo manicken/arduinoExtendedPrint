@@ -148,11 +148,17 @@ public class manickenPrint implements Tool
 			}
 			boolean interactive = true;
 
-			ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (Boolean doPrint) ->  {
-				if (!doPrint) {
+			ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (PrintDialogArguments pdArgs) ->  {
+				if (pdArgs == null) {
 					editor.statusNotice(tr("Printing canceled."));
 					return;
 				}
+				if (pdArgs.PaperOrientation == java.awt.print.PageFormat.PORTRAIT)
+					printAset.add(OrientationRequested.PORTRAIT);
+				else if (pdArgs.PaperOrientation == java.awt.print.PageFormat.LANDSCAPE)
+					printAset.add(OrientationRequested.LANDSCAPE);
+				else if (pdArgs.PaperOrientation == java.awt.print.PageFormat.REVERSE_LANDSCAPE)
+					printAset.add(OrientationRequested.REVERSE_LANDSCAPE);	
 				try {
 					boolean done = jtp.print(header, footer, showPrintDialog, printService, printAset, interactive);
 					if (!done) {
@@ -189,8 +195,8 @@ public class manickenPrint implements Tool
 		jtp.setText(MyDiscourseFormat.GetResult(editor, _printInColor, _printLineNumbers, lineNumberSpacing));
 		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
 
-		ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (Boolean doPrint) ->  {
-			if (!doPrint) {
+		ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (PrintDialogArguments pdArgs) ->  {
+			if (pdArgs == null) {
 				editor.statusNotice(tr("Printing canceled."));
 				return;
 			}
@@ -199,7 +205,8 @@ public class manickenPrint implements Tool
 				editor.statusNotice(tr("Printing..."));
 				PrinterJob printerJob = PrinterJob.getPrinterJob();
 				if (pageFormat == null) pageFormat = printerJob.defaultPage();
-				pageFormat.setOrientation(0);
+
+				pageFormat.setOrientation(pdArgs.PaperOrientation);
 				printerJob.setPrintable(jtp.getPrintable(null, null), pageFormat);
 
 				// set the name of the job to the code name
@@ -226,12 +233,14 @@ public class manickenPrint implements Tool
 
 	boolean printLineNumbers = false;
 	boolean printInColor = false;
-	private void ShowPrintPreview(javax.swing.JTextPane jtp, boolean _printLineNumbers, boolean _printInColor, java.util.function.Consumer<Boolean> printButtonPressed)
+	private void ShowPrintPreview(javax.swing.JTextPane jtp, boolean _printLineNumbers, boolean _printInColor, java.util.function.Consumer<PrintDialogArguments> printButtonPressed)
 	{
+		PrintDialogArguments pdArgs = new PrintDialogArguments();
+
 		printLineNumbers = _printLineNumbers;
 		printInColor = _printInColor;
 		javax.swing.JFrame jframe = new javax.swing.JFrame();
-        jframe.setSize(500, 500);
+        jframe.setSize(750, 600);
 		jframe.setDefaultCloseOperation(javax.swing.JFrame.HIDE_ON_CLOSE);
 		jframe.addWindowListener(new java.awt.event.WindowAdapter()
         {
@@ -239,7 +248,7 @@ public class manickenPrint implements Tool
             public void windowClosing(java.awt.event.WindowEvent e)
             {
 				//System.out.println("PrintPreview closing");
-                printButtonPressed.accept(false);
+                printButtonPressed.accept(null);
                 e.getWindow().dispose();
             }
         });
@@ -249,7 +258,7 @@ public class manickenPrint implements Tool
 
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
-				printButtonPressed.accept(true);
+				printButtonPressed.accept(pdArgs);
 				//System.out.println("PrintPreview print pressed");
 				jframe.setVisible(false);
 			}
@@ -259,7 +268,7 @@ public class manickenPrint implements Tool
 
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
-				printButtonPressed.accept(false);
+				printButtonPressed.accept(null);
 				//System.out.println("PrintPreview cancel pressed");
 				jframe.setVisible(false);
 			}
@@ -268,6 +277,24 @@ public class manickenPrint implements Tool
 		jpButtons.add(btn);
 		jpButtons.add(btn2);
 		javax.swing.JPanel jpToolBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
+
+		javax.swing.JLabel lblPaperOrientation = new javax.swing.JLabel("Paper Orientation");
+		jpToolBar.add(lblPaperOrientation);
+		javax.swing.JComboBox cBox = new javax.swing.JComboBox(new String[] {"Landscape", "Portrait", "Reverse Landscape"});
+		cBox.setSelectedItem("Portrait");
+		cBox.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				if (cBox.getSelectedItem().toString().equals("Portrait"))
+					pdArgs.PaperOrientation = java.awt.print.PageFormat.PORTRAIT;
+				else if (cBox.getSelectedItem().toString().equals("Landscape"))
+					pdArgs.PaperOrientation = java.awt.print.PageFormat.LANDSCAPE;
+				else if (cBox.getSelectedItem().toString().equals("Reverse Landscape"))
+					pdArgs.PaperOrientation = java.awt.print.PageFormat.REVERSE_LANDSCAPE;
+			}
+		});
+		jpToolBar.add(cBox);
 
 		javax.swing.JCheckBox chkShowLineNumbers = new javax.swing.JCheckBox("Show Line Numbers");
 		chkShowLineNumbers.setSelected(printLineNumbers);
@@ -280,6 +307,7 @@ public class manickenPrint implements Tool
 				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
 			}
 		});
+		jpToolBar.add(chkShowLineNumbers);
 
 		javax.swing.JCheckBox chkShowInColor = new javax.swing.JCheckBox("Show In Color");
 		chkShowInColor.setSelected(printInColor);
@@ -301,9 +329,9 @@ public class manickenPrint implements Tool
 				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
 			}
 		});
-
-		jpToolBar.add(chkShowLineNumbers);
-		jpToolBar.add(chkShowInColor);
+        jpToolBar.add(chkShowInColor);
+		
+		
 		jframe.add(jpToolBar, java.awt.BorderLayout.NORTH);
 		jframe.add(jpButtons, java.awt.BorderLayout.SOUTH);
 
@@ -312,6 +340,12 @@ public class manickenPrint implements Tool
 		scrollableTextArea.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_ALWAYS); 
 		
 		jframe.add(scrollableTextArea);
-        jframe.setVisible(true);
+		jframe.setVisible(true);
+		jframe.setSize(750, 600);
+	}
+	class PrintDialogArguments
+	{
+		public int PaperOrientation = java.awt.print.PageFormat.PORTRAIT;
+
 	}
 }
