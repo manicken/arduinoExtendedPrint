@@ -99,8 +99,8 @@ public class manickenPrint implements Tool
 					CustomMenu.Item("Print", event -> Print(true, true)),
 					CustomMenu.Seperator(),
 					CustomMenu.Item("alt Print (shows Arduino default print dialog)", event -> PrintAlt(true, true)),
-					CustomMenu.Seperator(),
-					CustomMenu.Item("Settings (not implemented yet)", event -> ShowSettings()),
+					//CustomMenu.Seperator(),
+					//CustomMenu.Item("Settings (not implemented yet)", event -> ShowSettings()),
 				});
 			cm.Init(true);
 		} catch (Exception e) {
@@ -119,95 +119,65 @@ public class manickenPrint implements Tool
 	PrintService printService;
 	private void Print(boolean _printLineNumbers, boolean _printInColor)
 	{
-		JTextPane jtp = new JTextPane();
-		if (_printInColor)
-			jtp.setContentType("text/html");
-		else
-			jtp.setContentType("text/text");
-
-		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
-
-		jtp.setText(MyDiscourseFormat.GetResult(editor, _printInColor, _printLineNumbers, lineNumberSpacing));
-		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
-		try{
-			final MessageFormat header = new MessageFormat(editor.getSketch().getName());
-			final MessageFormat footer = new MessageFormat("");
-			boolean showPrintDialog = true;
-			
-			if (printAset == null)
-			{
+		ShowPrintPreview(_printLineNumbers, _printInColor, (PrintDialogArguments pdArgs) ->  {
+			if (pdArgs == null) {
+				editor.statusNotice(tr("Printing canceled."));
+				return;
+			}
+			try{
+				final MessageFormat header = new MessageFormat(editor.getSketch().getName());
+				final MessageFormat footer = new MessageFormat("");
+				boolean showPrintDialog = true;
 				
-				printAset = new HashPrintRequestAttributeSet();
-				printAset.add(MediaSizeName.ISO_A4);
-			}
-			if (printService == null)
-			{
-				//System.out.println("printService == null");
-				PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
-				if (printServices.length != 0) printService = printServices[0];
-			}
-			boolean interactive = true;
-
-			ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (PrintDialogArguments pdArgs) ->  {
-				if (pdArgs == null) {
-					editor.statusNotice(tr("Printing canceled."));
-					return;
+				if (printAset == null)
+				{
+					
+					printAset = new HashPrintRequestAttributeSet();
+					printAset.add(MediaSizeName.ISO_A4);
 				}
+				if (printService == null)
+				{
+					//System.out.println("printService == null");
+					PrintService[] printServices = javax.print.PrintServiceLookup.lookupPrintServices(null, null);
+					if (printServices.length != 0) printService = printServices[0];
+				}
+				boolean interactive = true;
+			
 				if (pdArgs.PaperOrientation == java.awt.print.PageFormat.PORTRAIT)
 					printAset.add(OrientationRequested.PORTRAIT);
 				else if (pdArgs.PaperOrientation == java.awt.print.PageFormat.LANDSCAPE)
 					printAset.add(OrientationRequested.LANDSCAPE);
 				else if (pdArgs.PaperOrientation == java.awt.print.PageFormat.REVERSE_LANDSCAPE)
 					printAset.add(OrientationRequested.REVERSE_LANDSCAPE);	
-				try {
-					boolean done = jtp.print(header, footer, showPrintDialog, printService, printAset, interactive);
-					if (!done) {
-						editor.statusNotice(tr("Printing canceled."));
-						return;
-					}
-					editor.statusNotice(tr("Done printing."));
-				} catch (PrinterException pe) {
-					editor.statusError(tr("Error while printing."));
-					pe.printStackTrace();
+
+				boolean done = pdArgs.jtp.print(header, footer, showPrintDialog, printService, printAset, interactive);
+				if (!done) {
+					editor.statusNotice(tr("Printing canceled."));
+					return;
 				}
-			});
-		}
-		catch (Exception ex) {
-			editor.statusError(tr("Error while printing."));
-			ex.printStackTrace();
-		}
+				editor.statusNotice(tr("Done printing."));
+			} catch (PrinterException pe) {
+				editor.statusError(tr("Error while printing."));
+				pe.printStackTrace();
+			}
+		});
 	}
 
 	private PageFormat pageFormat;
 	private void PrintAlt(boolean _printLineNumbers, boolean _printInColor) {
-		JTextPane jtp = new JTextPane();
 
-		if (_printInColor)
-		{
-			jtp.setEditorKit(new javax.swing.text.html.HTMLEditorKit());
-			jtp.setContentType("text/html");
-		}
-		else
-			jtp.setContentType("text/text");
-
-		String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
-
-		jtp.setText(MyDiscourseFormat.GetResult(editor, _printInColor, _printLineNumbers, lineNumberSpacing));
-		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
-
-		ShowPrintPreview(jtp, _printLineNumbers, _printInColor, (PrintDialogArguments pdArgs) ->  {
+		ShowPrintPreview(_printLineNumbers, _printInColor, (PrintDialogArguments pdArgs) ->  {
 			if (pdArgs == null) {
 				editor.statusNotice(tr("Printing canceled."));
 				return;
 			}
 			try {
-
 				editor.statusNotice(tr("Printing..."));
 				PrinterJob printerJob = PrinterJob.getPrinterJob();
 				if (pageFormat == null) pageFormat = printerJob.defaultPage();
 
 				pageFormat.setOrientation(pdArgs.PaperOrientation);
-				printerJob.setPrintable(jtp.getPrintable(null, null), pageFormat);
+				printerJob.setPrintable(pdArgs.jtp.getPrintable(null, null), pageFormat);
 
 				// set the name of the job to the code name
 				printerJob.setJobName(editor.getCurrentTab().getSketchFile().getPrettyName());
@@ -233,12 +203,21 @@ public class manickenPrint implements Tool
 
 	boolean printLineNumbers = false;
 	boolean printInColor = false;
-	private void ShowPrintPreview(javax.swing.JTextPane jtp, boolean _printLineNumbers, boolean _printInColor, java.util.function.Consumer<PrintDialogArguments> printButtonPressed)
+	String lineNumberSpacing = "  ";
+	PrintDialogArguments pdArgs;
+	private void ShowPrintPreview(boolean _printLineNumbers, boolean _printInColor, java.util.function.Consumer<PrintDialogArguments> printButtonPressed)
 	{
-		PrintDialogArguments pdArgs = new PrintDialogArguments();
-
+		if (pdArgs == null) pdArgs = new PrintDialogArguments();
+		
 		printLineNumbers = _printLineNumbers;
 		printInColor = _printInColor;
+		JTextPane jtp = new JTextPane();
+		pdArgs.jtp = jtp;
+		if (_printInColor) jtp.setContentType("text/html");
+		else jtp.setContentType("text/text");
+		jtp.setFont(editor.getCurrentTab().getTextArea().getFontForTokenType(0));
+		jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+
 		javax.swing.JFrame jframe = new javax.swing.JFrame();
         jframe.setSize(750, 600);
 		jframe.setDefaultCloseOperation(javax.swing.JFrame.HIDE_ON_CLOSE);
@@ -278,6 +257,22 @@ public class manickenPrint implements Tool
 		jpButtons.add(btn2);
 		javax.swing.JPanel jpToolBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
 
+		javax.swing.JLabel lblLineNumberSpacing = new javax.swing.JLabel("Line Number Spacing");
+		jpToolBar.add(lblLineNumberSpacing);
+		javax.swing.JTextArea txtLineNumberSpacing = new javax.swing.JTextArea(lineNumberSpacing);
+		txtLineNumberSpacing.setColumns(8);
+		jpToolBar.add(txtLineNumberSpacing);
+		javax.swing.JButton btnLineNumberSpacing = new javax.swing.JButton("apply");
+		jpToolBar.add(btnLineNumberSpacing);
+		btnLineNumberSpacing.addActionListener(new java.awt.event.ActionListener() {
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+				lineNumberSpacing = txtLineNumberSpacing.getText();
+				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
+			}
+		});
+
 		javax.swing.JLabel lblPaperOrientation = new javax.swing.JLabel("Paper Orientation");
 		jpToolBar.add(lblPaperOrientation);
 		javax.swing.JComboBox cBox = new javax.swing.JComboBox(new String[] {"Landscape", "Portrait", "Reverse Landscape"});
@@ -303,7 +298,7 @@ public class manickenPrint implements Tool
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
 				printLineNumbers = chkShowLineNumbers.isSelected();
-				String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+				//String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
 				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
 			}
 		});
@@ -316,15 +311,10 @@ public class manickenPrint implements Tool
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
 				printInColor = chkShowInColor.isSelected();
-				String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
+				//String lineNumberSpacing = String.format("%1$" + SpacesAfterLineNumber + "s", "");
 				
-				if (printInColor)
-				{
-					//jtp.setEditorKit(new javax.swing.text.html.HTMLEditorKit());
-					jtp.setContentType("text/html");
-				}
-				else
-					jtp.setContentType("text/text");
+				if (printInColor) jtp.setContentType("text/html");
+				else jtp.setContentType("text/text");
 
 				jtp.setText(MyDiscourseFormat.GetResult(editor, printInColor, printLineNumbers, lineNumberSpacing));
 			}
@@ -346,6 +336,6 @@ public class manickenPrint implements Tool
 	class PrintDialogArguments
 	{
 		public int PaperOrientation = java.awt.print.PageFormat.PORTRAIT;
-
+		public JTextPane jtp;
 	}
 }
